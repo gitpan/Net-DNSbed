@@ -8,7 +8,7 @@ use JSON;
 use LWP::UserAgent;
 
 use vars qw/$VERSION/;
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 sub new {
     my $class = shift;
@@ -68,8 +68,22 @@ sub listZones {
     my $self = shift;
     my $uid = $self->{uid};
     my $token = $self->{token};
+    my $zid = shift;
 
-    $self->reqTemplate('listZones',"uid=$uid&token=$token");
+    if ($zid) {
+        $self->reqTemplate('listZones',"uid=$uid&token=$token&zid=$zid");
+    } else {
+        $self->reqTemplate('listZones',"uid=$uid&token=$token");
+    }
+}
+
+sub checkZone {
+    my $self = shift;
+    my $uid = $self->{uid};
+    my $token = $self->{token};
+    my $zone = shift || croak "you must provide a valid zone";
+
+    $self->reqTemplate('checkZone',"uid=$uid&token=$token&zone=$zone");
 }
 
 sub listRecords {
@@ -148,7 +162,7 @@ Net::DNSbed - Perl client for DNSbed API
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 
 =head1 SYNOPSIS
@@ -157,8 +171,9 @@ Version 0.01
 
     my $dnsbed = Net::DNSbed->new($uid,$token);
 
-    $dnsbed->addZone("example.com");
+    $dnsbed->addZone($zone);
     $dnsbed->listZones;
+    $dnsbed->checkZone($zone);
     $dnsbed->delZone($zid);
 
     $dnsbed->addRecord($zid,
@@ -191,31 +206,38 @@ Version 0.01
 
 Initialize the object. You should be able to get your UID and token from DNSbed.com
 
-=head2 addZone(zonename)
+=head2 addZone(zone)
 
 The argument is the valid zone name, i.e, google.com, but not www.google.com
 
 For the result of this method and all the methods below, just Data::Dumper it.
 
     use Data::Dumper;
-    my $res = $dnsbed->addZone("example.com");
+    my $res = $dnsbed->addZone($zone);
     print Dumper $res;
 
 =head2 listZones()
 
     use Data::Dumper;
-    my $res = $dnsbed->listZones;
+    my $res = $dnsbed->listZones; # or
+    my $res = $dnsbed->listZones($zid);
+    print Dumper $res;
+
+=head2 checkZone(zone)
+
+    use Data::Dumper;
+    my $res = $dnsbed->checkZone($zone);
     print Dumper $res;
 
 =head2 delZone(zid)
 
 The only argument is a valid zone ID.
 
-=head2 addRecord(zid,%rr_hash)
+=head2 addRecord(zid,rr_hash)
 
 The first argument is zid, which must be provided.
 
-The keys in %rr_hash must have:
+The keys in rr_hash must have:
 
 rname: the record's name, i.e, www (but not www.example.com)
 
@@ -227,11 +249,11 @@ ttl: the record's TTL, it's a number, i.e, 600 means 600 seconds
 
 mxnum: if the record's type is MX, this means MX host's priority, otherwise it's meaningless
 
-=head2 modifyRecord(zid,%rr_hash)
+=head2 modifyRecord(zid,rr_hash)
 
 The first argument is zid, which must be provided.
 
-The keys in %rr_hash must have:
+The keys in rr_hash must have:
 
 rid: the record's ID with the values you want to modify
 
@@ -239,31 +261,31 @@ rname, rtype, rvalue, ttl, mxnum: the new values provided by you
 
 Notice: after executing this method, the old RID will be lost, with the new record you get a new RID, not the before one.
 
-=head2 delRecord(zid,%rr_hash)
+=head2 delRecord(zid,rr_hash)
 
 The first argument is zid, which must be provided.
 
-The keys in %rr_hash must have:
+The keys in rr_hash must have:
 
 rid: the record's ID with the values you want to delete
 
-=head2 listRecords(zid,%optional_rr_hash)
+=head2 listRecords(zid,optional_rr_hash)
 
 The first argument is zid, which must be provided.
 
 If you don't provide the second argument, it returns all the records for this zone ID.
 
-%optional_rr_hash could have one of these two keys:
+optional_rr_hash could have one of these two keys:
 
 rid: if provided, it returns only one record with this rid
 
 rids: it could be, i.e, "1,2,3,4", then returns the records with rid 1,2,3 and 4
 
-=head2 searchRecords(zid,%kw_hash)
+=head2 searchRecords(zid,kw_hash)
 
 The first argument is zid, which must be provided.
 
-The keys in %kw_hash must have:
+The keys in kw_hash must have:
 
 keyword: the keyword you want to search with
 
